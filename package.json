@@ -11,6 +11,8 @@
   "author": "LIMHOSUNG",
   "license": "MIT",
   "dependencies": {
+    "@types/koa-websocket": "^5.0.4",
+    "@types/ws": "^6.0.3",
     "class-validator": "^0.9.1",
     "koa": "^2.5.2",
     "koa-bodyparser": "^4.2.1",
@@ -19,9 +21,11 @@
     "pg": "^7.4.3",
     "ts-node": "^7.0.0",
     "tsconfig-paths": "^3.4.2",
-    "typeorm": "^0.2.7"
+    "typeorm": "^0.2.7",
+    "ws": "^7.1.2"
   },
   "devDependencies": {
+    "@types/koa-router": "^7.0.42",
     "nodemon": "^1.18.3",
     "typescript": "^2.9.2"
   }
