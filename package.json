@@ -1,0 +1,28 @@
+{
+  "name": "koa-websocket-rest-api-example",
+  "version": "1.0.0",
+  "description": "A flexible api middleware based on Node and KOA.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js"
+  },
+  "author": "LIMHOSUNG",
+  "license": "MIT",
+  "dependencies": {
+    "class-validator": "^0.9.1",
+    "koa": "^2.5.2",
+    "koa-bodyparser": "^4.2.1",
+    "koa-router": "^7.4.0",
+    "koa-websocket": "^6.0.0",
+    "pg": "^7.4.3",
+    "ts-node": "^7.0.0",
+    "tsconfig-paths": "^3.4.2",
+    "typeorm": "^0.2.7"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.3",
+    "typescript": "^2.9.2"
+  }
+}
