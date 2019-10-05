@@ -8,11 +8,18 @@ import {
     Column,
     CreateDateColumn,
     UpdateDateColumn,
+    AfterUpdate,
+    AfterInsert,
+    BeforeUpdate,
+    BeforeRemove,
+    AdvancedConsoleLogger,
+    BeforeInsert,
 } from 'typeorm';
 
 //Import functions from the class-valadiator package that we will
 //use to validate data when someone is creating or editing a user
 import { Length, IsEmail } from 'class-validator';
+import WebSocket = require('ws');
 
 //This decorator (denoted by the @ symbol) tells type-orm that
 //we want to call the database table users
@@ -20,6 +27,38 @@ import { Length, IsEmail } from 'class-validator';
 
 //Export the User class so we can use it elsewhere in our project
 export class User {
+
+    @BeforeInsert()
+    beforeUser(){
+        const wsClient = new WebSocket('ws://localhost:5001/')
+        let data = {
+            type : 'beforeInsert',
+            id : this.id,
+            email : this.email,
+            name : this.name
+        }
+        wsClient.onopen = (event)=>{
+            wsClient.send(`${JSON.stringify(data)}`);
+            wsClient.close();
+        }
+        
+    }
+
+    @AfterInsert()
+    InsertUser(){
+        const wsClient = new WebSocket('ws://localhost:5001/')
+        let data = {
+            type : 'afterInsert',
+            id : this.id,
+            email : this.email,
+            name : this.name
+        }
+        wsClient.onopen = (event)=>{
+            wsClient.send(JSON.stringify(data));
+            wsClient.close();
+        }
+        
+    }
 
     @PrimaryGeneratedColumn('uuid')     //Tell Postgre to generate a Unique Key for this column
     id: string;                         //Name of the column is id and type is string
@@ -32,6 +71,7 @@ export class User {
     @IsEmail()
     email: string;
 
+
     @Column('text')
     hashedPassword: string;
     
@@ -40,4 +80,5 @@ export class User {
 
     @UpdateDateColumn()
     updatedAt: Date;
+
 }

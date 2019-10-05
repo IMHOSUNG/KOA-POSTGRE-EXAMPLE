@@ -4,16 +4,14 @@ import {qaRouter} from 'routes/qa-routes';
 import {restRouter} from 'routes/rest-routes';
 import {wsRouter} from 'routes/ws-routes';
 import * as bodyParser from 'koa-bodyparser';
-import Route = require('koa-router')
 import * as Koa from 'koa';
 var app = require('./app')
 import WebSocket = require('ws');
 import webSockify = require('koa-websocket')
 import http = require('http');
-import * as Router from 'koa-router';
+import Router = require('koa-router');
 import { NextFunction } from 'connect';
-import { createContext, runInNewContext } from 'vm';
-
+import * as RedisSMQ from 'rsmq'
 
 const bootstrap = async () => {
 
@@ -98,9 +96,12 @@ const wsKoaWebSocket = async () => {
 }
 
 const koa = require('./app')
-const wsGetPostAndSendingBack = async(koa:any,kPort:number, Port:number,backUrl:string) => {
+const wsGetPostAndSendingBack = async(koa:any,kPort:number, Port:number,backUrl?:string) => {
 
   await postgresDB();
+  koa.use(bodyParser())
+  koa.use(qaRouter.routes(), qaRouter.allowedMethods())
+  koa.use(restRouter.routes(), restRouter.allowedMethods())
   const wsServer = new WebSocket.Server({ port:Port })
   wsServer.on('connection', (ws:WebSocket)=>{
       console.log('connect');
@@ -111,23 +112,12 @@ const wsGetPostAndSendingBack = async(koa:any,kPort:number, Port:number,backUrl:
       })
       ws.on('hello', (message:string)=>{
         wsServer.clients.forEach(client=>{
-          client.send(`Hello, broadcast message -> ${message}`);
+          client.send(`Hello -> ${message}`);
         })
       })
   })
 
-  const wsClient = new WebSocket(backUrl);
   koa.context.wss = wsServer;
-  koa.context.wsc = wsClient;
-  wsClient.onopen = function(event){
-    console.log('sending data');
-    wsClient.send('test');
-  }
-  koa.use((ctx, next) => {
-     console.log('set websocket koa get Front port 4000 ws port 4100')
-     console.log(`${ctx.wsc}`)
-     next();
-  });
   koa.use(wsRouter.routes(), wsRouter.allowedMethods());
   koa.listen(kPort);
 }
@@ -140,15 +130,71 @@ const wsGetWsAndSendingFront = async(koa:any,kPort:number, Port:number) => {
       console.log('ws sending front connect');
       ws.on('message', (message:string)=>{
         wsServer.clients.forEach(client=>{
-          client.send(`Hello, broadcast message -> ${message}`);
+          console.log(message)
+          client.send(`${message}`);
         })
       })
   })
 }
 
+const TestRSMQ = async() => {
+
+  // ns 는 namespace 같은 것
+  const rsmq = new RedisSMQ({host : "localhost", port: 6379 , ns : "rsmq"}) 
+  
+  //rsmq.deleteQueueAsync({qname:"myqueue"})
+
+  await rsmq.createQueueAsync({qname:"myqueue"})
+  .then((resp)=>{
+    if(resp == 1)
+      console.log("queue created");
+  }).catch(async(err)=>{
+      if(err.name == "queueExists"){
+        await rsmq.deleteQueueAsync({qname:"myqueue"}).then(async()=>{
+          console.log("existed queue delete");
+          await rsmq.createQueueAsync({qname:"myqueue"}).then(()=>{
+            console.log("make new queue");
+          })
+        })
+      }
+  })
+
+  await rsmq.sendMessageAsync({qname:"myqueue", message:"Hello World"}).then(function (resp) {
+    if (resp) {
+        console.log("Message sent. ID:", resp);
+    }
+  });
+
+  await rsmq.receiveMessageAsync({qname:"myqueue"}).then(async(resp) => {
+    if (resp['id']) {
+        console.log("Message received.", resp)	
+        await rsmq.deleteMessageAsync({qname:"myqueue", id:resp['id']}).then(()=>{
+          console.log(`delete ${resp['id']}`);
+        })
+    }
+    else {
+        console.log("No messages for me...")
+    }
+  });
+  await rsmq.receiveMessageAsync({qname:"myqueue"}).then(async(resp) => {
+    if (resp['id']) {
+        console.log("Message received.", resp)	
+        await rsmq.deleteMessageAsync({qname:"myqueue", id:resp['id']}).then(()=>{
+          console.log(`delete ${resp['id']}`);
+        })
+    }
+    else {
+        console.log("No messages for me...")
+    }
+  });
+
+  
+}
+
 //bootstrap();
 //wsBasic();
 //wsKoaWebSocket();
-wsGetWsAndSendingFront(koa,5000,5001);
-wsGetPostAndSendingBack(koa,4000,4001,'ws://localhost:5001/');
-
+//wsGetWsAndSendingFront(koa,5000,5001);
+//wsGetPostAndSendingBack(koa,4000,4001,'ws://localhost:5001/');
+//wsGetPostAndSendingBack(koa,4100,4101,'ws://localhost:5001/');
+TestRSMQ();
