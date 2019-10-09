@@ -13,6 +13,7 @@
   "dependencies": {
     "@types/koa-bodyparser": "^4.3.0",
     "@types/koa-websocket": "^5.0.4",
+    "@types/redis": "^2.8.14",
     "@types/rsmq": "^0.3.27",
     "@types/ws": "^6.0.3",
     "class-validator": "^0.9.1",
@@ -21,6 +22,7 @@
     "koa-router": "^7.4.0",
     "koa-websocket": "^6.0.0",
     "pg": "^7.4.3",
+    "redis": "^2.8.0",
     "rsmq": "^0.11.0",
     "ts-node": "^7.0.0",
     "tsconfig-paths": "^3.4.2",

@@ -12,7 +12,9 @@ import http = require('http');
 import Router = require('koa-router');
 import { NextFunction } from 'connect';
 import * as RedisSMQ from 'rsmq'
+import * as redis from 'redis'
 
+/*
 const bootstrap = async () => {
 
     // Initialize the database
@@ -32,8 +34,7 @@ const bootstrap = async () => {
     //console.log(app.ws.clients)
     //Tell the app to listen on port 3000
     app.listen(3000);
-};
-
+};*/
 
 const wsBasic = async () => {
 
@@ -140,7 +141,7 @@ const wsGetWsAndSendingFront = async(koa:any,kPort:number, Port:number) => {
 const TestRSMQ = async() => {
 
   // ns 는 namespace 같은 것
-  const rsmq = new RedisSMQ({host : "localhost", port: 6379 , ns : "rsmq"}) 
+  const rsmq = new RedisSMQ({host : "localhost", port: 6379 , ns : "rsmq", realtime : true}) 
   
   //rsmq.deleteQueueAsync({qname:"myqueue"})
 
@@ -159,36 +160,81 @@ const TestRSMQ = async() => {
       }
   })
 
+  setInterval(insertDeamon,1000);
+
+  await rsmq.popMessageAsync({qname:"myqueue"}).then((resp)=>{
+    if(resp['id']){
+      console.log(resp)
+    }else{
+      console.log("no pop message")
+    }
+  })
+
+  await rsmq.receiveMessageAsync({qname:"myqueue"}).then(async(resp) => {
+    if (resp['id']) {
+        console.log("Message received.", resp)	
+        await rsmq.deleteMessageAsync({qname:"myqueue", id:resp['id']}).then(()=>{
+          console.log(`delete ${resp['id']}`);
+        })
+    }
+    else {
+        console.log("No messages for me...")
+    }
+  });
+}
+
+const insertDeamon = async() =>{
+
+  const rsmq = new RedisSMQ({host : "localhost", port: 6379 , ns : "rsmq", realtime : true}) 
   await rsmq.sendMessageAsync({qname:"myqueue", message:"Hello World"}).then(function (resp) {
     if (resp) {
         console.log("Message sent. ID:", resp);
     }
   });
+  /*
+  await rsmq.getQueueAttributesAsync({ qname: "myqueue" }).then((resp) =>{
+    console.log("==============================================");
+    console.log("=================Queue Stats==================");
+    console.log("==============================================");
+    console.log("visibility timeout: ", resp.vt);
+    console.log("delay for new messages: ", resp.delay);
+    console.log("max size in bytes: ", resp.maxsize);
+    console.log("total received messages: ", resp.totalrecv);
+    console.log("total sent messages: ", resp.totalsent);
+    console.log("created: ", resp.created);
+    console.log("last modified: ", resp.modified);
+    console.log("current n of messages: ", resp.msgs);
+    console.log("hidden messages: ", resp.hiddenmsgs);
+  }).catch((err)=>{
+    console.log(err);
+    return;
+  });*/
+}
 
-  await rsmq.receiveMessageAsync({qname:"myqueue"}).then(async(resp) => {
-    if (resp['id']) {
-        console.log("Message received.", resp)	
-        await rsmq.deleteMessageAsync({qname:"myqueue", id:resp['id']}).then(()=>{
-          console.log(`delete ${resp['id']}`);
-        })
-    }
-    else {
-        console.log("No messages for me...")
-    }
-  });
-  await rsmq.receiveMessageAsync({qname:"myqueue"}).then(async(resp) => {
-    if (resp['id']) {
-        console.log("Message received.", resp)	
-        await rsmq.deleteMessageAsync({qname:"myqueue", id:resp['id']}).then(()=>{
-          console.log(`delete ${resp['id']}`);
-        })
-    }
-    else {
-        console.log("No messages for me...")
-    }
-  });
+const rsmq = new RedisSMQ({host : "localhost", port: 6379 , ns : "rsmq", realtime : true})
 
+const subScriberDeamon = async()=>{
+
+  let subscriber = redis.createClient();
   
+
+  subscriber.on("message", (channel,message)=>{
+    console.log(`Message : ${message} :: Channel ${channel}`)
+  })
+
+  subscriber.subscribe("rsmq:rt:myqueue");
+}
+
+const subScribeRSMQ = async() => {
+
+  let subscriber = redis.createClient();
+  
+  subscriber.on("message", (channel,message)=>{
+    console.log(`Message : ${message} :: Channel ${channel}`)
+    
+  })
+
+  subscriber.subscribe("rsmq:rt:myqueue");
 }
 
 //bootstrap();
@@ -198,3 +244,5 @@ const TestRSMQ = async() => {
 //wsGetPostAndSendingBack(koa,4000,4001,'ws://localhost:5001/');
 //wsGetPostAndSendingBack(koa,4100,4101,'ws://localhost:5001/');
 TestRSMQ();
+//subScriberDeamon();
+subScribeRSMQ();
