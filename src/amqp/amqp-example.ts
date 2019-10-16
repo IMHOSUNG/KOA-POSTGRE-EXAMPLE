@@ -218,11 +218,99 @@ const receiveLogDirect = async() => {
 // Routerkey = 'direct'의 Routing Key
 // topic = 'topic'
 // 점(.) 으로 구분된 단어 목록 topic은 임의의 routing_key를 가질 수 없다.
-// * > 정확히 한 단어를 대체 할 수 있다.
-// # > 0개 이상의 단어를 대체할 수 있다.
+// tt.tt.rabbit > *.*.rabbit
+// * > 정확히 한 . 사이를 대체 할 수 있다.
+// tt.tt.rabbit > #.rabbit 
+// # > 0개 이상의 . 사이를 대체할 수 있다.
 
 //send();
 //send();
 //receive();
 //receive_Log_From_Exchange_Machine();
-receiveLogDirect();
+//receiveLogDirect();
+
+const fib = (n:number) => {
+    if(n ==0 || n == 1)
+        return n;
+    else   
+        return fib(n-1) + fib(n-2);
+}
+
+const rpc_server = async() => {
+
+    let con = await MQConnection();
+    let ch = await con.createChannel();
+
+    let queue = 'rpc_queue';
+
+    ch.assertQueue(queue,{
+        durable : false
+    })
+
+    ch.prefetch(1);
+
+    console.log('[x] RPC 요청을 기다리는 중')
+    ch.consume(queue, (msg)=>{
+        let n = parseInt(msg.content.toString());
+
+        console.log(" [.] fib(%d)" , n);
+
+        let r = fib(n);
+
+        ch.sendToQueue(msg.properties.replyTo,
+            Buffer.from(r.toString()),{
+                correlationId : msg.properties.correlationId
+            }
+        )
+
+        ch.ack(msg);
+
+    })
+}
+
+const rpc_client = async() => {
+
+    let args = process.argv.slice(2);
+
+    if(args.length == 0){
+        console.log("Usage : rpc_client.js num")
+        process.exit(1);
+    }
+
+    let con = await MQConnection();
+    let ch = await con.createChannel();
+
+    let q = await ch.assertQueue('')
+
+    let correlationId = generateUuid();
+    let num = parseInt(args[0]);
+
+    console.log(' [x] Requesting fib(%d)',num);
+
+    ch.consume(q.queue, (msg)=>{
+        if(msg.properties.correlationId == correlationId){
+            console.log(' [.] Got %s',msg.content.toString());
+            setTimeout(()=>{
+                con.close();
+                process.exit(0);
+            },500)
+        }
+    },{
+        noAck : true
+    });
+
+    ch.sendToQueue('rpc_queue',
+        Buffer.from(num.toString()),{
+            correlationId : correlationId,
+            replyTo : q.queue
+        }
+    )
+}
+
+const generateUuid= () => {
+    return Math.random().toString() +
+           Math.random().toString() +
+           Math.random().toString()
+} 
+
+rpc_server();
