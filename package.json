@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
-    "amqp-test": "nodemon --watch src -e ts,tsx --exec ts-node ./src/amqp/amqp-example.ts"
+    "amqp-emit": "nodemon --watch src -e ts,tsx --exec ts-node ./src/amqp/amqp-topic-emit.ts",
+    "amqp-rev" : "nodemon --watch src -e ts,tsx --exec ts-node ./src/amqp/amqp-topic-rev.ts"
   },
   "author": "LIMHOSUNG",
   "license": "MIT",
