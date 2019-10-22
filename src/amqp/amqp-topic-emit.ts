@@ -23,7 +23,7 @@ export const MQConnection = async() => {
     return open
 } 
 
-const EmitMessage = async(value:string) => {
+const EmitMessage = async() => {
 
     //command 
     // command error "Run. Run. Or it will explode"
@@ -36,23 +36,25 @@ const EmitMessage = async(value:string) => {
     let msg_2 = randString();
 
     let args = process.argv.slice(2);
-    console.log(args);
-    let serverity_1 = 'BTC.BUY.'+value;
-    let serverity_2 = 'BTC.SELL.'+value;
+
+    let serverity_1 = 'BTC_BUY_QUEUE';
+    let serverity_2 = 'BTC.SELL.10000';
 
     //topic 방식
     //exchange를 topic으로 바꾸면 된다.
-    ch.assertExchange(exchangeMN, 'topic', {
+    ch.assertExchange(exchangeMN, 'direct', {
         durable : false
     })
 
+    ch.assertQueue(serverity_1,{durable:true});
+    ch.sendToQueue(serverity_1,Buffer.from("hello"),{persistent:true});
     //exchage publish sell queue
-    ch.publish(exchangeMN, serverity_1 , Buffer.from(msg_1));
-    console.log("[x] Sent %s: '%s'", serverity_1, msg_1);
+    //ch.publish(exchangeMN, serverity_1 , Buffer.from(msg_1));
+    //console.log("[x] Sent %s: '%s'", serverity_1, msg_1);
 
     //exchange publish buy queue
-    ch.publish(exchangeMN, serverity_2 , Buffer.from(msg_2));
-    console.log("[x] Sent %s: '%s'", serverity_2, msg_2);
+    //ch.publish(exchangeMN, serverity_2 , Buffer.from(msg_2));
+    //console.log("[x] Sent %s: '%s'", serverity_2, msg_2);
 }
 
 
@@ -89,5 +91,5 @@ const receiveLogDirect = async() => {
     })
 }
 
-setInterval(async()=>await EmitMessage('10000') , 0);
-setInterval(async()=>await EmitMessage('15000') , 0);
+setInterval(async()=>await EmitMessage() , 0);
+setInterval(async()=>await EmitMessage() , 0);
